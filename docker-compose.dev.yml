@@ -23,7 +23,9 @@ services:
     ports:
       - '27017:27017'
     volumes:
-      - mongo-data:/data/db
+      - mongo-data:/data/db            # Volume pour les données MongoDB
+      - ./db/backup:/backup  # Liaison avec le dossier de ton projet
+    command: ["/bin/bash", "-c", "apt-get update && apt-get install -y netcat-openbsd && bash /backup/startMongo.sh"]
 
 volumes:
-  mongo-data:
+  mongo-data:                            # Définition du volume pour les données
