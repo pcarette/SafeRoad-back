@@ -1,4 +1,4 @@
-const { Schema, model } = require("mongoose");
+const { Schema, model, SchemaType } = require("mongoose");
 
 
 
@@ -6,6 +6,10 @@ const { Schema, model } = require("mongoose");
 // answers collection
 const answerSchema = new Schema(
   {
+    question: {
+      type : Schema.Types.ObjectId,
+      ref : "Question"
+    },
     numero: {
       type: Number,
       required: [true, "Numero is required."],
