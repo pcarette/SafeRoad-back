@@ -1,4 +1,6 @@
 const { expressjwt: jwt } = require("express-jwt");
+const { verify : verifyJwt } = require("jsonwebtoken");
+
 
 // Instantiate the JWT token validation middleware
 const isAuthenticated = jwt({
@@ -7,6 +9,14 @@ const isAuthenticated = jwt({
   requestProperty: "payload",
   getToken: getTokenFromHeaders,
 });
+
+const handleJwtErrors = (err, req, res, next) => {
+  if (err.name === "UnauthorizedError") {
+    // If there's a problem with the token
+    return res.status(401).json({ message: "Invalid or missing token" });
+  }
+  next(err); // Pass the error to the default error handler if it's not an UnauthorizedError
+};
 
 // Function used to extract the JWT token from the request's 'Authorization' Headers
 function getTokenFromHeaders(req) {
@@ -19,11 +29,23 @@ function getTokenFromHeaders(req) {
     const token = req.headers.authorization.split(" ")[1];
     return token;
   }
-
+  
   return null;
 }
 
+function isolateUserId (req, res, next) {
+  const token = req.headers.authorization.split(" ")[1];
+  verifyJwt(token, process.env.TOKEN_SECRET, async (err, decoded) => {
+    if (err) {
+      res.status(401).json({message : "Error while reading JWT"})
+    }
+    req.userId = decoded._id;
+    next();
+  })
+}
 // Export the middleware so that we can use it to create protected routes
 module.exports = {
   isAuthenticated,
+  isolateUserId,
+  handleJwtErrors,
 };
