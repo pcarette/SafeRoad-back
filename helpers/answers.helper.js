@@ -1,11 +1,9 @@
 function transformPropositions(arr) {
-  return arr.map(item => {
-    const num = parseInt(item.replace(/\D/g, ''), 10);
-    // If num is NaN, return some default value (e.g., 0 or -1)
-    return isNaN(num) ? -1 : num - 1;
-  });
-}
-
+    return arr.map(item => {
+      // Extract the digit(s) from the string and convert to a number
+      return parseInt(item.replace(/\D/g, ''), 10) - 1;
+    });
+  }
 
   function compareAnswers(arr1, arr2) {
     // Convert both arrays to Sets

@@ -71,29 +71,10 @@ router.get(
       isCorrect: true,
     });
 
-    const serie = await Serie.findOneAndUpdate({ user: req.userId });
+    const serie = await Serie.findOneAndUpdate({ user: req.userId, _id : req.params.serieId }, {score: score}, {new : true});
 
-    const maxNList = 3;
-    const { selectedAnswers, questionId } = req.body;
 
-    const answer = await Answer.findOne({ question: questionId });
-
-    const answersFormatted = answerHelper.transformPropositions(answer.answers);
-
-    const isCorrect = answerHelper.compareAnswers(
-      selectedAnswers,
-      answersFormatted
-    );
-
-    const userResponse = await UserResponse.create({
-      userId: req.userId,
-      serieId: req.params.serieId,
-      questionId,
-      selectedAnswers,
-      isCorrect,
-    });
-
-    res.status(200).json(userResponse);
+    res.status(200).json(serie);
   }
 );
 
@@ -111,7 +92,7 @@ router.post(
 
     console.log("questionId : ", questionId);
 
-    const answer = await Answer.findOne({ question: questionId }).lean();
+    const answer = await Answer.findOne({ question: questionId });
 
     console.log("answer : ", answer);
 
