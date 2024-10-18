@@ -43,6 +43,7 @@ router.get(
       );
     } else {
       const [oldestSerie, ...series] = user.series;
+      await Serie.deleteOne({_id : oldestSerie});
       await User.updateOne(
         { _id: req.userId },
         { series: [...series, newSerie._id] }
