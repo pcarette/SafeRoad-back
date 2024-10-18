@@ -1,6 +1,5 @@
 const { Schema, model } = require("mongoose");
 
-
 // series collection
 const serieSchema = new Schema(
   {
@@ -9,8 +8,12 @@ const serieSchema = new Schema(
       ref: "Question",
       required: [true, "question is required."],
     },
-    user: {type : Schema.Types.ObjectId, ref : "User", required : [true, "User is required"]},
-    score : Number,
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "User is required"],
+    },
+    score: { type: Number, default: 0 },
   },
   {
     // this second object adds extra properties: `createdAt` and `updatedAt`
@@ -19,12 +22,5 @@ const serieSchema = new Schema(
 );
 
 const Serie = model("Serie", serieSchema);
-
-
-
-
-
-
-
 
 module.exports = Serie;

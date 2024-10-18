@@ -4,6 +4,7 @@ const router = express.Router();
 const Question = require("../db/models/Question.model");
 const Answer = require("../db/models/Answer.model");
 const Serie = require("../db/models/Serie.model.js");
+const User = require("../db/models/User.model.js");
 
 const answerHelper = require("../helpers/answers.helper.js");
 
@@ -11,7 +12,6 @@ const {
   isAuthenticated,
   isolateUserId,
 } = require("../middleware/jwt.middleware.js");
-const UserResponse = require("../db/models/UserResponse.model.js");
 
 //GET methode for questions
 router.get(
@@ -22,22 +22,6 @@ router.get(
     // If JWT token is valid
 
     const nQuestions = 3;
-
-    const now = new Date();
-    const twentySecondsAgo = new Date(now.getTime() - 20 * 1000 * nQuestions);
-
-    const lastValidSerie = await Serie.findOne({
-      createdAt: { $gte: twentySecondsAgo },
-    }).populate("questions");
-
-    console.log("lastValidSerie : ", lastValidSerie);
-
-    if (lastValidSerie) {
-      res.status(200).json(lastValidSerie);
-      return;
-    }
-
-    //If there's no recent serie, create a new one and return it
 
     const randomDocs = await Question.aggregate([
       { $sample: { size: nQuestions } },
@@ -50,30 +34,37 @@ router.get(
       await Serie.create({ questions: questionIds, user: req.userId })
     ).populate("questions");
 
+    const user = await User.findOne({ _id: req.userId });
+
+    if (user.series.length < 10) {
+      await User.updateOne(
+        { _id: req.userId },
+        { $push: { series: newSerie._id } }
+      );
+    } else {
+      const [oldestSerie, ...series] = user.series;
+      await User.updateOne(
+        { _id: req.userId },
+        { series: [...series, newSerie._id] }
+      );
+    }
+
     // Send back the token payload object containing the user data
     res.status(200).json(newSerie);
   }
 );
 
-//POST method for answers
+//GET method for answers
 router.get(
   "/serie/:serieId",
   isAuthenticated,
   isolateUserId,
   async (req, res, next) => {
     // If JWT token is valid
-    console.log("req.params.serieId : ", req.params.serieId);
-    console.log("req.body : ", req.body);
-
-    const score = await UserResponse.countDocuments({
-      userId: req.userId,
-      serieId: req.params.serieId,
-      isCorrect: true,
+    const serie = await Serie.findOne({
+      user: req.userId,
+      _id: req.params.serieId,
     });
-
-    const serie = await Serie.findOneAndUpdate({ user: req.userId, _id : req.params.serieId }, {score: score}, {new : true});
-
-
     res.status(200).json(serie);
   }
 );
@@ -85,41 +76,29 @@ router.post(
   isolateUserId,
   async (req, res, next) => {
     // If JWT token is valid
-    console.log("req.params.serieId : ", req.params.serieId);
-    console.log("req.body : ", req.body);
 
     const { selectedAnswers, questionId } = req.body;
 
-    console.log("questionId : ", questionId);
-
     const answer = await Answer.findOne({ question: questionId });
 
-    console.log("answer : ", answer);
-
-    if (!answer) {
-      return;
-    }
-
     const answersFormatted = answerHelper.transformPropositions(answer.answers);
-
-    console.log("answersFormatted : ", answersFormatted);
 
     const isCorrect = answerHelper.compareAnswers(
       selectedAnswers,
       answersFormatted
     );
 
-    console.log("isCorrect : ", isCorrect);
-
-    const userResponse = await UserResponse.create({
-      userId: req.userId,
-      serieId: req.params.serieId,
-      questionId,
-      selectedAnswers,
-      isCorrect,
-    });
-
-    res.status(200).json(userResponse);
+    if (isCorrect) {
+      const serie = await Serie.findOneAndUpdate(
+        { _id: req.params.serieId },
+        { $inc: { score: 1 } },
+        { new: true }
+      );
+      res.status(200).json(serie);
+    } else {
+      const serie = await Serie.findOne({ _id: req.params.serieId });
+      res.status(200).json(serie);
+    }
   }
 );
 

@@ -1,6 +1,5 @@
 const { Schema, model } = require("mongoose");
 
-
 // users collection
 const userSchema = new Schema(
   {
@@ -15,6 +14,11 @@ const userSchema = new Schema(
       type: String,
       required: [true, "Password is required."],
     },
+    series: {
+      type: [Schema.Types.ObjectId],
+      ref: "Serie",
+      default: [],
+    },
   },
   {
     // this second object adds extra properties: `createdAt` and `updatedAt`
@@ -23,10 +27,5 @@ const userSchema = new Schema(
 );
 
 const User = model("User", userSchema);
-
-
-
-
-
 
 module.exports = User;
