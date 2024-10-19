@@ -64,8 +64,7 @@ router.get(
     // If JWT token is valid
     const serie = await Serie.findOne({
       user: req.userId,
-      createdAt: -1,
-    });
+    }).sort({createdAt: -1});
     res.status(200).json(serie);
   }
 );
