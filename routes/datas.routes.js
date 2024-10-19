@@ -43,7 +43,7 @@ router.get(
       );
     } else {
       const [oldestSerie, ...series] = user.series;
-      await Serie.deleteOne({_id : oldestSerie});
+      await Serie.deleteOne({ _id: oldestSerie });
       await User.updateOne(
         { _id: req.userId },
         { series: [...series, newSerie._id] }
@@ -57,14 +57,14 @@ router.get(
 
 //GET method for answers
 router.get(
-  "/serie/:serieId",
+  "/serie/last",
   isAuthenticated,
   isolateUserId,
   async (req, res, next) => {
     // If JWT token is valid
     const serie = await Serie.findOne({
       user: req.userId,
-      _id: req.params.serieId,
+      createdAt: -1,
     });
     res.status(200).json(serie);
   }
@@ -72,7 +72,7 @@ router.get(
 
 //POST method for answers
 router.post(
-  "/serie/:serieId",
+  "/serie/last",
   isAuthenticated,
   isolateUserId,
   async (req, res, next) => {
@@ -89,16 +89,25 @@ router.post(
       answersFormatted
     );
 
+    const latestSerie = await Serie.findOne({ user : req.userId }).sort({createdAt : -1});
+
+    if (latestSerie.currentQuestion >= latestSerie.questions.length) {
+      return res.status(401).json({message : "serie already finished"});
+    }
+
     if (isCorrect) {
       const serie = await Serie.findOneAndUpdate(
-        { _id: req.params.serieId },
-        { $inc: { score: 1 } },
+        { _id : latestSerie._id },
+        { $inc: { score: 1, currentQuestion: 1 } },
         { new: true }
       );
-      res.status(200).json(serie);
+      res.status(200).json({nextQuestion : serie.currentQuestion});
     } else {
-      const serie = await Serie.findOne({ _id: req.params.serieId });
-      res.status(200).json(serie);
+      const serie = await Serie.findOneAndUpdate({ _id : latestSerie._id },
+        { $inc: { currentQuestion: 1 } },
+        { new: true }
+       );
+      res.status(200).json({nextQuestion : serie.currentQuestion});
     }
   }
 );
