@@ -13,10 +13,6 @@ const questionSchema = new Schema(
       type: String,
       required: [true, "question is required."],
     },
-    nPropositions: {
-      type: Number,
-      required: [true, "nPropositions is required."],
-    },
     propositions: {
       type: [String],
       required: [true, "propositions are required."],

@@ -6,17 +6,13 @@ const { Schema, model, SchemaType } = require("mongoose");
 // answers collection
 const answerSchema = new Schema(
   {
-    question: {
-      type : Schema.Types.ObjectId,
-      ref : "Question"
-    },
     numero: {
       type: Number,
       required: [true, "Numero is required."],
       unique: true,
     },
     answers: {
-      type: [String],
+      type: [Number],
       required: [true, "answers are required."],
     },
     commentaire: {

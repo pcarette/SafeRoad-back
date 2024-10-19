@@ -13,6 +13,10 @@ const {
   isolateUserId,
 } = require("../middleware/jwt.middleware.js");
 
+
+
+
+
 //GET methode for questions
 router.get(
   "/questions",
@@ -34,7 +38,7 @@ router.get(
       await Serie.create({ questions: questionIds, user: req.userId })
     ).populate("questions");
 
-    const user = await User.findOne({ _id: req.userId });
+    const user = await User.findById(req.userId);
 
     if (user.series.length < 10) {
       await User.updateOne(
@@ -51,64 +55,64 @@ router.get(
     }
 
     // Send back the token payload object containing the user data
-    res.status(200).json(newSerie);
+    const { questions, currentQuestion } = newSerie;
+    const datasToSend = { questions, currentQuestion };
+    res.status(200).json(datasToSend);
   }
 );
 
-//GET method for answers
-router.get(
-  "/serie/last",
-  isAuthenticated,
-  isolateUserId,
-  async (req, res, next) => {
-    // If JWT token is valid
-    const serie = await Serie.findOne({
-      user: req.userId,
-    }).sort({createdAt: -1});
-    res.status(200).json(serie);
-  }
-);
 
-//POST method for answers
+
+
+//POST method for series
 router.post(
   "/serie/last",
   isAuthenticated,
   isolateUserId,
   async (req, res, next) => {
+  
     // If JWT token is valid
-
-    const { selectedAnswers, questionId } = req.body;
-
-    const answer = await Answer.findOne({ question: questionId });
-
-    const answersFormatted = answerHelper.transformPropositions(answer.answers);
-
-    const isCorrect = answerHelper.compareAnswers(
-      selectedAnswers,
-      answersFormatted
+    const { selectedAnswers, indexQuestion } = req.body;
+    const user = await ( await User.findById(req.userId).populate('series'));
+    const actualSerie = user.series[user.series.length - 1];
+    const actualQuestion = await Question.findById(actualSerie.questions[actualSerie.currentQuestion]);
+    
+    if( !Array.isArray(selectedAnswers) || selectedAnswers.every(item => typeof item === 'number') || selectedAnswers.length > actualQuestion.propositions.length) {
+    	return res.status(401).json({message : "Bad format for POST serie"});
+    }
+    
+    if(indexQuestion !== actualSerie.currentQuestion) {
+    	return res.status(401).json({message : "Not the good indexQuestion for POST serie"});
+    }
+    
+    actualSerie = await Serie.findByIdAndUpdate(
+      actualSerie._id,
+      { $set: { currentQuestion: actualSerie.currentQuestion + 1, [inputsByUser[actualSerie.currentQuestion]]: selectedAnswers } },
+      { new: true }
     );
-
-    const latestSerie = await Serie.findOne({ user : req.userId }).sort({createdAt : -1});
-
-    if (latestSerie.currentQuestion >= latestSerie.questions.length) {
-      return res.status(401).json({message : "serie already finished"});
-    }
-
-    if (isCorrect) {
-      const serie = await Serie.findOneAndUpdate(
-        { _id : latestSerie._id },
-        { $inc: { score: 1, currentQuestion: 1 } },
-        { new: true }
-      );
-      res.status(200).json({nextQuestion : serie.currentQuestion});
-    } else {
-      const serie = await Serie.findOneAndUpdate({ _id : latestSerie._id },
-        { $inc: { currentQuestion: 1 } },
-        { new: true }
-       );
-      res.status(200).json({nextQuestion : serie.currentQuestion});
-    }
+    
+    
+    // IF SERIE ISNT FINISH
+    if(actualSerie.currentQuestion < actualSerie.questions.length) {
+    	return res.status(200).json({success : "ok", nextQuestion : actualSerie.currentQuestion});
+	}
+	
+	// IF SERIE IS FINISH
+	var datasToSend = {success: "ok", realAnswers: actualSerie.inputsByUser, answersByUser: [], score: 0};
+	var score = 0;
+	for (const [index, idQuest] of actualSerie.questions.entries()) {
+		const question = await Question.findById(idQuest);
+		const answer = await Answer.findOne({numero : question.numero});
+		datasToSend.realAnswers.push(answer);
+		const isCorrect = answerHelper.compareAnswers( actualSerie.inputsByUser[index], answer.answers );  if (isCorrect) {score += 1;};
+	}
+	datasToSend.score = score;
+	return res.status(200).json(datasToSend);
   }
 );
+
+
+
+
 
 module.exports = router;

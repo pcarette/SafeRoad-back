@@ -1,1 +1,1 @@
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"numero":{"$numberInt":"1"}},"name":"numero_1","background":true,"unique":true}],"uuid":"de88eb2772404884bfe15a351e6b0da2","collectionName":"answers","type":"collection"}
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"numero":{"$numberInt":"1"}},"name":"numero_1","background":true,"unique":true}],"uuid":"ee2efed405cc49bda94ebff90bcd111c","collectionName":"answers","type":"collection"}

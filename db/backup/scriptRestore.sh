@@ -7,6 +7,6 @@ until nc -z localhost 27017; do
 done
 
 # Restaurer la base de données
-mongorestore --host localhost --db SafeRoad-back /backup/SafeRoad-back
+mongorestore --host localhost --db SafeRoad-back --drop /backup/SafeRoad-back
 
 echo "Restauration de la base de données terminée."

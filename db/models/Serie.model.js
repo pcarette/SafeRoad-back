@@ -13,7 +13,7 @@ const serieSchema = new Schema(
       ref: "User",
       required: [true, "User is required"],
     },
-    score: { type: Number, default: 0 },
+    inputsByUser: { type: [[Number]] },
     currentQuestion: { type: Number, default: 0 },
   },
   {
@@ -25,3 +25,4 @@ const serieSchema = new Schema(
 const Serie = model("Serie", serieSchema);
 
 module.exports = Serie;
+

@@ -1,4 +1,4 @@
-function transformPropositions(arr) {
+function transformPropositions(arr) {                                     // NON UTILISE
     return arr.map(item => {
       // Extract the digit(s) from the string and convert to a number
       return parseInt(item.replace(/\D/g, ''), 10) - 1;
