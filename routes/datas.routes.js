@@ -23,10 +23,21 @@ router.get(
   isAuthenticated,
   isolateUserId,
   async (req, res, next) => {
+    
     // If JWT token is valid
-
     const nQuestions = 3;
-
+    const user = await User.findById(req.userId);
+    
+    // Verify si une serie est deja en cours
+    if(user.series.length > 0) {
+		const lastSerie = await (await Serie.findById(user.series[user.series.length - 1])).populate("questions");
+		if(lastSerie.currentQuestion < lastSerie.questions.length) {                                // LE MIEUX SERAIT D'AJOUTER UN CHAMPS "STATUS (en cours ou finish)" DANS LA COLLECTION SERIE
+			const { questions, currentQuestion } = lastSerie;
+			const datasToSend = { questions, currentQuestion };
+			return res.status(200).json(datasToSend); 
+		}
+	}
+	
     const randomDocs = await Question.aggregate([
       { $sample: { size: nQuestions } },
     ]);
@@ -37,8 +48,6 @@ router.get(
     const newSerie = await (
       await Serie.create({ questions: questionIds, user: req.userId })
     ).populate("questions");
-
-    const user = await User.findById(req.userId);
 
     if (user.series.length < 10) {
       await User.updateOne(
@@ -57,7 +66,7 @@ router.get(
     // Send back the token payload object containing the user data
     const { questions, currentQuestion } = newSerie;
     const datasToSend = { questions, currentQuestion };
-    res.status(200).json(datasToSend);
+    return res.status(200).json(datasToSend);
   }
 );
 
@@ -74,20 +83,24 @@ router.post(
     // If JWT token is valid
     const { selectedAnswers, indexQuestion } = req.body;
     const user = await ( await User.findById(req.userId).populate('series'));
-    const actualSerie = user.series[user.series.length - 1];
-    const actualQuestion = await Question.findById(actualSerie.questions[actualSerie.currentQuestion]);
+    var actualSerie = user.series[user.series.length - 1];
     
-    if( !Array.isArray(selectedAnswers) || selectedAnswers.every(item => typeof item === 'number') || selectedAnswers.length > actualQuestion.propositions.length) {
-    	return res.status(401).json({message : "Bad format for POST serie"});
+    if(actualSerie.currentQuestion >= actualSerie.questions.length) {                     // LE MIEUX SERAIT D'AJOUTER UN CHAMPS "STATUS (en cours ou finish)" DANS LA COLLECTION SERIE
+    	return res.status(401).json({message : "Cette série est deja terminée"});
     }
     
+    const actualQuestion = await Question.findById(actualSerie.questions[actualSerie.currentQuestion]);
+    
+    if( !Array.isArray(selectedAnswers) || !selectedAnswers.every(item => typeof item === 'number') || selectedAnswers.length > actualQuestion.propositions.length) {
+    	return res.status(401).json({message : "Bad format for POST serie"});
+    }
     if(indexQuestion !== actualSerie.currentQuestion) {
     	return res.status(401).json({message : "Not the good indexQuestion for POST serie"});
     }
     
     actualSerie = await Serie.findByIdAndUpdate(
       actualSerie._id,
-      { $set: { currentQuestion: actualSerie.currentQuestion + 1, [inputsByUser[actualSerie.currentQuestion]]: selectedAnswers } },
+      { $set: { currentQuestion: actualSerie.currentQuestion + 1, [`inputsByUser.${actualSerie.currentQuestion}`]: selectedAnswers } },
       { new: true }
     );
     
@@ -96,9 +109,9 @@ router.post(
     if(actualSerie.currentQuestion < actualSerie.questions.length) {
     	return res.status(200).json({success : "ok", nextQuestion : actualSerie.currentQuestion});
 	}
-	
+
 	// IF SERIE IS FINISH
-	var datasToSend = {success: "ok", realAnswers: actualSerie.inputsByUser, answersByUser: [], score: 0};
+	var datasToSend = {success: "ok", realAnswers: [], answersByUser: [...actualSerie.inputsByUser], score: 0};
 	var score = 0;
 	for (const [index, idQuest] of actualSerie.questions.entries()) {
 		const question = await Question.findById(idQuest);
@@ -106,13 +119,12 @@ router.post(
 		datasToSend.realAnswers.push(answer);
 		const isCorrect = answerHelper.compareAnswers( actualSerie.inputsByUser[index], answer.answers );  if (isCorrect) {score += 1;};
 	}
+	await Serie.findByIdAndUpdate( actualSerie._id, { $set: { score: score, } } );
 	datasToSend.score = score;
 	return res.status(200).json(datasToSend);
   }
 );
-
-
-
+	
 
 
 module.exports = router;
