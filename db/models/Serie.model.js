@@ -15,6 +15,7 @@ const serieSchema = new Schema(
     },
     inputsByUser: { type: [[Number]] },
     currentQuestion: { type: Number, default: 0 },
+    score: Number
   },
   {
     // this second object adds extra properties: `createdAt` and `updatedAt`
